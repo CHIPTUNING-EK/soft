@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Поиск прошивок · Яндекс.Диск</title>
+<style>
+  :root{
+    --bg:#0a0a0c;
+    --panel:#141417;
+    --panel-2:#1c1c20;
+    --line:#2a2a30;
+    --txt:#e8e6e3;
+    --muted:#8a8a92;
+    --amber:#ffb020;
+    --orange:#ff6a1a;
+    --red:#e01f1f;
+    --heat:linear-gradient(90deg,var(--amber),var(--orange),var(--red));
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace}
+  body{padding:18px;max-width:820px;margin:0 auto;font-size:14px;line-height:1.5}
+  header{border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:18px}
+  h1{font-size:17px;margin:0 0 4px;letter-spacing:.5px}
+  h1 .bar{display:inline-block;width:10px;height:16px;background:var(--heat);
+    margin-right:9px;vertical-align:-2px;border-radius:1px}
+  .sub{color:var(--muted);font-size:11.5px}
+  label{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;
+    letter-spacing:1px;margin:0 0 6px}
+  input[type=text]{width:100%;background:var(--panel);border:1px solid var(--line);
+    color:var(--txt);padding:11px 12px;border-radius:8px;font:inherit;font-size:13.5px}
+  input[type=text]:focus{outline:none;border-color:var(--orange);
+    box-shadow:0 0 0 2px rgba(255,106,26,.15)}
+  .field{margin-bottom:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .row .field{flex:1;margin-bottom:0;min-width:180px}
+  button{background:var(--panel-2);border:1px solid var(--line);color:var(--txt);
+    padding:11px 16px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;
+    transition:.15s}
+  button:hover{border-color:var(--orange)}
+  button.go{background:var(--heat);border:none;color:#120a02;font-weight:700}
+  button.go:hover{filter:brightness(1.08)}
+  .toggle{display:flex;align-items:center;gap:8px;color:var(--muted);
+    font-size:12px;cursor:pointer;user-select:none;margin:12px 0 4px}
+  .toggle input{accent-color:var(--orange);width:15px;height:15px}
+  #status{margin:16px 0 10px;font-size:12px;color:var(--muted);min-height:16px}
+  #status b{color:var(--amber)}
+  .err{color:#ff8b7a !important}
+  .count{color:var(--txt)}
+  .list{display:flex;flex-direction:column;gap:8px}
+  .item{background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:12px 13px;display:flex;gap:12px;align-items:center}
+  .item .meta{flex:1;min-width:0}
+  .item .name{font-size:13.5px;word-break:break-all}
+  .item .name .hit{background:rgba(255,176,32,.22);color:var(--amber);
+    border-radius:3px;padding:0 2px}
+  .item .path{color:var(--muted);font-size:11px;margin-top:3px;word-break:break-all}
+  .item .size{color:var(--muted);font-size:11px;margin-top:2px}
+  .dl{flex-shrink:0;text-decoration:none;background:var(--panel-2);
+    border:1px solid var(--line);color:var(--amber);padding:9px 13px;border-radius:8px;
+    font-size:12px;white-space:nowrap;transition:.15s}
+  .dl:hover{border-color:var(--orange);background:#26160a}
+  .hint{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:11px;line-height:1.7}
+  .hint code{background:var(--panel);padding:1px 5px;border-radius:4px;color:var(--amber)}
+  a{color:var(--orange)}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="bar"></span>ПОИСК ПРОШИВОК</h1>
+  <div class="sub">Открытая папка Яндекс.Диска → номер прошивки → скачивание</div>
+</header>
+
+<div class="field">
+  <label>Публичная ссылка на папку</label>
+  <input type="text" id="folder" placeholder="https://disk.yandex.ru/d/xxxxxxxx" autocomplete="off">
+</div>
+
+<div class="row">
+  <div class="field">
+    <label>Номер / имя прошивки</label>
+    <input type="text" id="query" placeholder="напр. 4G0907115P или ME17.9.21" autocomplete="off">
+  </div>
+  <button class="go" id="btnFind">Найти</button>
+  <button id="btnAll">Показать всё</button>
+</div>
+
+<label class="toggle"><input type="checkbox" id="deep" checked> искать в подпапках</label>
+
+<div id="status"></div>
+<div class="list" id="results"></div>
+
+<div class="hint">
+  Папка должна быть открыта по публичной ссылке (в Диске: «Поделиться» → ссылка).
+  Поиск идёт по подстроке в имени файла — регистр не важен.<br>
+  Если браузер выдаст ошибку сети/CORS — открой этот файл по <code>https://</code>
+  (GitHub Pages), а не как локальный <code>file://</code>.
+</div>
+
+<script>
+const API = 'https://cloud-api.yandex.net/v1/disk/public/resources';
+const $ = id => document.getElementById(id);
+const statusEl = $('status'), resultsEl = $('results');
+
+// восстановить сохранённую ссылку
+$('folder').value = localStorage.getItem('yd_folder') || '';
+$('folder').addEventListener('input', e => localStorage.setItem('yd_folder', e.target.value.trim()));
+
+function setStatus(html, err=false){ statusEl.className = err?'err':''; statusEl.innerHTML = html; }
+function fmtSize(b){ if(b==null) return ''; const u=['Б','КБ','МБ','ГБ']; let i=0,n=b;
+  while(n>=1024&&i<u.length-1){n/=1024;i++;} return n.toFixed(i?1:0)+' '+u[i]; }
+
+// получить полный список файлов (с рекурсией)
+async function crawl(publicKey, deep){
+  const files = [];
+  let folders = 0, requests = 0;
+  const MAX_REQ = 400; // предохранитель от бесконечного обхода
+
+  async function listOne(path){
+    let offset = 0; const limit = 200;
+    while(true){
+      if(requests++ > MAX_REQ) throw new Error('Слишком большая папка — обход прерван.');
+      const u = new URL(API);
+      u.searchParams.set('public_key', publicKey);
+      if(path) u.searchParams.set('path', path);
+      u.searchParams.set('limit', limit);
+      u.searchParams.set('offset', offset);
+      u.searchParams.set('sort', 'name');
+      const r = await fetch(u);
+      if(!r.ok){
+        if(r.status===404) throw new Error('Папка не найдена — проверь ссылку.');
+        throw new Error('Ошибка API: '+r.status);
+      }
+      const data = await r.json();
+      const emb = data._embedded;
+      if(!emb) break;
+      const subdirs = [];
+      for(const it of emb.items){
+        if(it.type==='file') files.push(it);
+        else if(it.type==='dir') subdirs.push(it.path);
+      }
+      const total = emb.total||emb.items.length;
+      offset += limit;
+      // подпапки обходим после текущей страницы
+      if(deep) for(const p of subdirs){ folders++; setStatus(`Сканирую… файлов: <b>${files.length}</b>, папок: ${folders}`); await listOne(p); }
+      if(offset >= total) break;
+    }
+  }
+
+  await listOne('');
+  return files;
+}
+
+let cache = null, cacheKey = '';
+
+async function run(filterMode){
+  const key = $('folder').value.trim();
+  const q = $('query').value.trim().toLowerCase();
+  const deep = $('deep').checked;
+  resultsEl.innerHTML = '';
+
+  if(!key){ setStatus('Вставь публичную ссылку на папку.', true); return; }
+  if(filterMode && !q){ setStatus('Введи номер прошивки или нажми «Показать всё».', true); return; }
+
+  setStatus('Сканирую…');
+  try{
+    // кэшируем список, чтобы повторный поиск не дёргал API заново
+    if(cache && cacheKey === key+'|'+deep){ /* используем кэш */ }
+    else { cache = await crawl(key, deep); cacheKey = key+'|'+deep; }
+
+    let list = cache;
+    if(filterMode) list = cache.filter(f => f.name.toLowerCase().includes(q));
+
+    if(!list.length){
+      setStatus(filterMode ? `Ничего не найдено по «${$('query').value.trim()}». Всего файлов в папке: ${cache.length}.`
+                           : 'В папке нет файлов.', true);
+      return;
+    }
+    setStatus(`Найдено: <span class="count">${list.length}</span>${filterMode?` из ${cache.length}`:''}`);
+    render(list, q);
+  }catch(e){
+    setStatus((e.message||'Ошибка') + ' <br>Если это CORS/сеть — открой инструмент по https:// (GitHub Pages).', true);
+  }
+}
+
+function render(list, q){
+  const frag = document.createDocumentFragment();
+  for(const f of list){
+    const div = document.createElement('div');
+    div.className = 'item';
+    let nameHtml = f.name;
+    if(q){ const i = f.name.toLowerCase().indexOf(q);
+      if(i>=0) nameHtml = f.name.slice(0,i)+'<span class="hit">'+f.name.slice(i,i+q.length)+'</span>'+f.name.slice(i+q.length); }
+    const path = (f.path||'').replace(/^disk:\//,'').replace('/'+f.name,'');
+    div.innerHTML =
+      `<div class="meta">
+         <div class="name">${nameHtml}</div>
+         ${path?`<div class="path">${path}/</div>`:''}
+         <div class="size">${fmtSize(f.size)}</div>
+       </div>`;
+    const a = document.createElement('a');
+    a.className = 'dl'; a.textContent = '↓ Скачать';
+    a.href = f.file || '#'; a.rel = 'noopener';
+    if(f.file) a.setAttribute('download', f.name);
+    div.appendChild(a);
+    frag.appendChild(div);
+  }
+  resultsEl.appendChild(frag);
+}
+
+$('btnFind').addEventListener('click', ()=>run(true));
+$('btnAll').addEventListener('click', ()=>run(false));
+$('query').addEventListener('keydown', e=>{ if(e.key==='Enter') run(true); });
+// сброс кэша при смене папки
+$('folder').addEventListener('change', ()=>{ cache=null; cacheKey=''; });
+$('deep').addEventListener('change', ()=>{ cache=null; cacheKey=''; });
+</script>
+</body>
+</html>
