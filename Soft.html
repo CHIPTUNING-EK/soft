@@ -204,42 +204,60 @@ function fmtSize(b){ if(b==null) return ''; const u=['Б','КБ','МБ','ГБ'];
 
 let searching=false, controller=null;
 const srcCache={};   // ключ url|deep -> файлы[]
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
-async function crawl(publicKey, deep){
-  const files=[]; let folders=0, requests=0; const MAX_REQ=400;
+// fetch с ретраями на таймауты/сетевые сбои/429/5xx
+async function fetchJson(u){
+  let lastErr;
+  for(let a=0;a<4;a++){
+    if(controller.signal.aborted) throw new DOMException('Aborted','AbortError');
+    try{
+      const r=await fetch(u,{signal:controller.signal});
+      if(r.status===404) throw new Error('папка не найдена');
+      if(r.status===429||r.status>=500){ lastErr=new Error('HTTP '+r.status); await sleep(600*(a+1)); continue; }
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return await r.json();
+    }catch(e){
+      if(e.name==='AbortError'||e.message==='папка не найдена') throw e;
+      lastErr=e; await sleep(600*(a+1));
+    }
+  }
+  throw lastErr||new Error('сеть');
+}
+
+async function crawl(publicKey, deep, onBatch){
+  let requests=0; const MAX_REQ=5000;   // фактически без ограничения
   async function listOne(path){
     let offset=0; const limit=200;
     while(true){
       if(controller.signal.aborted) throw new DOMException('Aborted','AbortError');
-      if(requests++ > MAX_REQ) throw new Error('Слишком большая папка — обход прерван.');
+      if(requests++ > MAX_REQ) throw new Error('Очень большой каталог — обход прерван.');
       const u=new URL(API);
       u.searchParams.set('public_key',publicKey);
       if(path) u.searchParams.set('path',path);
       u.searchParams.set('limit',limit); u.searchParams.set('offset',offset); u.searchParams.set('sort','name');
-      const r=await fetch(u,{signal:controller.signal});
-      if(!r.ok){ if(r.status===404) throw new Error('Папка не найдена: '+publicKey);
-        throw new Error('Ошибка API '+r.status); }
-      const data=await r.json(); const emb=data._embedded; if(!emb) break;
-      const subdirs=[];
-      for(const it of emb.items){ if(it.type==='file') files.push(it); else if(it.type==='dir') subdirs.push(it.path); }
+      const data=await fetchJson(u); const emb=data._embedded; if(!emb) break;
+      const pageFiles=[], subdirs=[];
+      for(const it of emb.items){ if(it.type==='file') pageFiles.push(it); else if(it.type==='dir') subdirs.push(it.path); }
+      if(pageFiles.length) onBatch(pageFiles);           // отдаём найденное сразу
       const total=emb.total||emb.items.length; offset+=limit;
-      if(deep) for(const p of subdirs){ folders++;
-        setStatus(`Сканирую… файлов: <b>${files.length}</b>, папок: ${folders}`); await listOne(p); }
+      if(deep) for(const p of subdirs){ await listOne(p); }
       if(offset>=total) break;
     }
   }
   await listOne('');
-  return files;
 }
 
-async function crawlSource(src, deep){
+async function crawlSource(src, deep, emit){
   const key=src.url+'|'+deep;
-  if(srcCache[key]) return srcCache[key];
-  setStatus(`Сканирую: ${src.name}…`);
-  const files=await crawl(src.url, deep);
-  files.forEach(f=>{ f._pub=src.url; f._src=src.name; });
-  srcCache[key]=files;
-  return files;
+  if(srcCache[key]){ emit(srcCache[key]); return; }      // из кэша — сразу всё
+  const collected=[];
+  await crawl(src.url, deep, batch=>{
+    batch.forEach(f=>{ f._pub=src.url; f._src=src.name; });
+    collected.push(...batch);
+    emit(batch);
+  });
+  srcCache[key]=collected;                               // кэшируем только полный обход
 }
 
 function setSearchingUI(on){
@@ -250,61 +268,73 @@ function setSearchingUI(on){
 
 async function run(filterMode){
   if(searching) return;
-  const q=$('query').value.trim().toLowerCase();
+  const qRaw=$('query').value.trim(); const q=qRaw.toLowerCase();
   const deep=$('deep').checked;
   const selected=[];
   if($('cbClients').checked) selected.push(SRC.clients);
   if($('cbShop').checked) selected.push(SRC.shop);
-  resultsEl.innerHTML='';
   if(!selected.length){ setStatus('Отметь хотя бы одну папку.',true); return; }
   if(filterMode && !q){ setStatus('Введи номер прошивки или нажми «Показать всё».',true); return; }
 
-  controller=new AbortController(); setSearchingUI(true); setStatus('Сканирую…');
-  const t0=performance.now();
+  resultsEl.innerHTML='';                    // очищаем один раз при старте
+  let shown=0, base=0; const seen=new Set();
+  function emit(batch){
+    for(const f of batch){
+      if(!isFw(f.name)) continue; base++;
+      if(filterMode && !f.name.toLowerCase().includes(q)) continue;
+      const idk=(f._pub||'')+'|'+(f.path||f.name);
+      if(seen.has(idk)) continue; seen.add(idk);
+      appendItem(f,q); shown++;
+    }
+    setStatus(`⟳ Сканирую… найдено: <span class="count">${shown}</span>`);
+  }
+
+  controller=new AbortController(); setSearchingUI(true); setStatus('⟳ Сканирую…');
+  const t0=performance.now(); const errs=[];
   try{
-    let all=[];
-    for(const s of selected){ const fs=await crawlSource(s,deep); all=all.concat(fs); }
-    const base=all.filter(f=>isFw(f.name));
-    let list=base; if(filterMode) list=base.filter(f=>f.name.toLowerCase().includes(q));
+    for(const s of selected){
+      try{ await crawlSource(s,deep,emit); }
+      catch(e){ if(e.name==='AbortError') throw e; errs.push(`${s.name}: ${e.message}`); }
+    }
     setTime(((performance.now()-t0)/1000).toFixed(1));
-    if(!list.length){
-      setStatus(filterMode?`Ничего не найдено по «${$('query').value.trim()}». Файлов .bin/.bcf: ${base.length}.`
-                          :'Нет файлов .bin/.bcf.',true);
+    if(shown>0){
+      let msg=`Найдено: <span class="count">${shown}</span>`+(filterMode?` · просмотрено .bin/.bcf: ${base}`:'');
+      if(errs.length) msg+=` <br>Пропущено: ${errs.join('; ')}`;
+      setStatus(msg,false);
+    } else if(errs.length){
+      setStatus('Ошибка папок: '+errs.join('; '),true);
     } else {
-      setStatus(`Найдено: <span class="count">${list.length}</span>${filterMode?` из ${base.length}`:''}`);
-      render(list,q);
+      setStatus(filterMode?`Ничего не найдено по «${qRaw}». Файлов .bin/.bcf: ${base}.`:'Нет файлов .bin/.bcf.',true);
     }
   }catch(e){
     setTime(((performance.now()-t0)/1000).toFixed(1));
-    if(e.name==='AbortError') setStatus('Поиск остановлен.',true);
-    else setStatus((e.message||'Ошибка')+' <br>Если CORS/сеть — открой по https:// (GitHub Pages).',true);
+    if(e.name==='AbortError')
+      setStatus(`■ Остановлено. Найдено: <span class="count">${shown}</span> — файлы сохранены.`,false);
+    else
+      setStatus((e.message||'Ошибка')+' <br>Если CORS/сеть — открой по https:// (GitHub Pages).',true);
   }finally{ setSearchingUI(false); controller=null; }
 }
 
-function render(list,q){
-  const frag=document.createDocumentFragment();
-  for(const f of list){
-    const div=document.createElement('div'); div.className='item';
-    let nameHtml=f.name;
-    if(q){ const i=f.name.toLowerCase().indexOf(q);
-      if(i>=0) nameHtml=f.name.slice(0,i)+'<span class="hit">'+f.name.slice(i,i+q.length)+'</span>'+f.name.slice(i+q.length); }
-    let path=(f.path||'').replace(/^disk:\//,'').replace('/'+f.name,'');
-    const meta=document.createElement('div'); meta.className='meta';
-    meta.innerHTML=`<div class="name">${nameHtml}</div>`+
-      `<div class="path"><span class="src">${f._src||''}</span>${path?' / '+path+'/':''}</div>`+
-      `<div class="size">${fmtSize(f.size)}</div>`;
-    const linkbox=document.createElement('div'); linkbox.className='linkbox'; linkbox.hidden=true;
-    meta.appendChild(linkbox);
+function appendItem(f,q){
+  const div=document.createElement('div'); div.className='item';
+  let nameHtml=f.name;
+  if(q){ const i=f.name.toLowerCase().indexOf(q);
+    if(i>=0) nameHtml=f.name.slice(0,i)+'<span class="hit">'+f.name.slice(i,i+q.length)+'</span>'+f.name.slice(i+q.length); }
+  let path=(f.path||'').replace(/^disk:\//,'').replace('/'+f.name,'');
+  const meta=document.createElement('div'); meta.className='meta';
+  meta.innerHTML=`<div class="name">${nameHtml}</div>`+
+    `<div class="path"><span class="src">${f._src||''}</span>${path?' / '+path+'/':''}</div>`+
+    `<div class="size">${fmtSize(f.size)}</div>`;
+  const linkbox=document.createElement('div'); linkbox.className='linkbox'; linkbox.hidden=true;
+  meta.appendChild(linkbox);
 
-    const actions=document.createElement('div'); actions.className='actions';
-    const bDl=mkBtn('СКАЧАТЬ','dl'), bLink=mkBtn('🔗 Ссылка','act');
-    bDl.onclick  =()=>withBusy(bDl,  async()=>{ await doDownload(f); });
-    bLink.onclick=()=>withBusy(bLink,async()=>{ showLink(linkbox, await resolveHref(f)); });
-    actions.append(bDl,bLink);
+  const actions=document.createElement('div'); actions.className='actions';
+  const bDl=mkBtn('СКАЧАТЬ','dl'), bLink=mkBtn('🔗 Ссылка','act');
+  bDl.onclick  =()=>withBusy(bDl,  async()=>{ await doDownload(f); });
+  bLink.onclick=()=>withBusy(bLink,async()=>{ showLink(linkbox, await resolveHref(f)); });
+  actions.append(bDl,bLink);
 
-    div.append(meta,actions); frag.appendChild(div);
-  }
-  resultsEl.appendChild(frag);
+  div.append(meta,actions); resultsEl.appendChild(div);
 }
 
 function mkBtn(t,c){ const b=document.createElement('button'); b.className=c; b.textContent=t; return b; }
