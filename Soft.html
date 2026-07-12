@@ -3,18 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Поиск прошивок · Яндекс.Диск</title>
+<title>Поиск прошивок</title>
 <style>
   :root{
-    --bg:#0a0a0c;
-    --panel:#141417;
-    --panel-2:#1c1c20;
-    --line:#2a2a30;
-    --txt:#e8e6e3;
-    --muted:#8a8a92;
-    --amber:#ffb020;
-    --orange:#ff6a1a;
-    --red:#e01f1f;
+    --bg:#0a0a0c;--panel:#141417;--panel-2:#1c1c20;--line:#2a2a30;
+    --txt:#e8e6e3;--muted:#8a8a92;--amber:#ffb020;--orange:#ff6a1a;--red:#e01f1f;
     --heat:linear-gradient(90deg,var(--amber),var(--orange),var(--red));
   }
   *{box-sizing:border-box}
@@ -26,21 +19,25 @@
   h1 .bar{display:inline-block;width:10px;height:16px;background:var(--heat);
     margin-right:9px;vertical-align:-2px;border-radius:1px}
   .sub{color:var(--muted);font-size:11.5px}
+  .sub .lockstate{color:var(--red)}
+  .sub .lockstate.ok{color:var(--amber)}
   label{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;
     letter-spacing:1px;margin:0 0 6px}
-  input[type=text]{width:100%;background:var(--panel);border:1px solid var(--line);
-    color:var(--txt);padding:11px 12px;border-radius:8px;font:inherit;font-size:13.5px}
-  input[type=text]:focus{outline:none;border-color:var(--orange);
-    box-shadow:0 0 0 2px rgba(255,106,26,.15)}
+  input[type=text],input[type=password]{width:100%;background:var(--panel);
+    border:1px solid var(--line);color:var(--txt);padding:11px 12px;border-radius:8px;
+    font:inherit;font-size:13.5px;letter-spacing:1px}
+  input:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 2px rgba(255,106,26,.15)}
   .field{margin-bottom:14px}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .row .field{flex:1;margin-bottom:0;min-width:180px}
   button{background:var(--panel-2);border:1px solid var(--line);color:var(--txt);
-    padding:11px 16px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;
-    transition:.15s}
-  button:hover{border-color:var(--orange)}
+    padding:11px 16px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer;transition:.15s}
+  button:hover:not(:disabled){border-color:var(--orange)}
+  button:disabled{opacity:.4;cursor:not-allowed}
   button.go{background:var(--heat);border:none;color:#120a02;font-weight:700}
-  button.go:hover{filter:brightness(1.08)}
+  button.go:hover:not(:disabled){filter:brightness(1.08)}
+  button.stop{border-color:#5a2020;color:#ff8b7a}
+  button.stop:hover:not(:disabled){border-color:var(--red);background:#2a1010}
   .toggle{display:flex;align-items:center;gap:8px;color:var(--muted);
     font-size:12px;cursor:pointer;user-select:none;margin:12px 0 4px}
   .toggle input{accent-color:var(--orange);width:15px;height:15px}
@@ -53,169 +50,199 @@
     padding:12px 13px;display:flex;gap:12px;align-items:center}
   .item .meta{flex:1;min-width:0}
   .item .name{font-size:13.5px;word-break:break-all}
-  .item .name .hit{background:rgba(255,176,32,.22);color:var(--amber);
-    border-radius:3px;padding:0 2px}
+  .item .name .hit{background:rgba(255,176,32,.22);color:var(--amber);border-radius:3px;padding:0 2px}
   .item .path{color:var(--muted);font-size:11px;margin-top:3px;word-break:break-all}
   .item .size{color:var(--muted);font-size:11px;margin-top:2px}
-  .dl{flex-shrink:0;text-decoration:none;background:var(--panel-2);
-    border:1px solid var(--line);color:var(--amber);padding:9px 13px;border-radius:8px;
-    font-size:12px;white-space:nowrap;transition:.15s}
-  .dl:hover{border-color:var(--orange);background:#26160a}
+  .dl{flex-shrink:0;background:var(--panel-2);border:1px solid var(--line);color:var(--amber);
+    padding:9px 13px;border-radius:8px;font-size:12px;white-space:nowrap;cursor:pointer;transition:.15s}
+  .dl:hover:not(:disabled){border-color:var(--orange);background:#26160a}
+  /* экран блокировки */
+  #lock{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:26px 22px;text-align:center;max-width:340px;margin:40px auto}
+  #lock .ico{font-size:26px;margin-bottom:10px}
+  #lock h2{margin:0 0 4px;font-size:14px;letter-spacing:1px;color:var(--red)}
+  #lock p{color:var(--muted);font-size:11.5px;margin:0 0 18px}
+  #lock input{text-align:center;font-size:18px;letter-spacing:6px;margin-bottom:12px}
+  #lock button{width:100%}
+  #lock.shake{animation:shk .35s}
+  @keyframes shk{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+  #lock .msg{color:#ff8b7a;font-size:11.5px;height:14px;margin-top:8px}
+  #app{display:none}
   .hint{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);
     color:var(--muted);font-size:11px;line-height:1.7}
-  .hint code{background:var(--panel);padding:1px 5px;border-radius:4px;color:var(--amber)}
-  a{color:var(--orange)}
 </style>
 </head>
 <body>
 <header>
   <h1><span class="bar"></span>ПОИСК ПРОШИВОК</h1>
-  <div class="sub">Открытая папка Яндекс.Диска → номер прошивки → скачивание</div>
+  <div class="sub">Статус: <span class="lockstate" id="lockLabel">заблокировано 🔒</span></div>
 </header>
 
-<div class="field">
-  <label>Публичная ссылка на папку</label>
-  <input type="text" id="folder" placeholder="https://disk.yandex.ru/d/xxxxxxxx" autocomplete="off">
+<!-- ЭКРАН БЛОКИРОВКИ -->
+<div id="lock">
+  <div class="ico">🔒</div>
+  <h2>ПОИСК ЗАБЛОКИРОВАН</h2>
+  <p>Введите пароль для доступа</p>
+  <input type="password" id="pass" inputmode="numeric" placeholder="••••" autocomplete="off">
+  <button class="go" id="unlock">Разблокировать</button>
+  <div class="msg" id="lockMsg"></div>
 </div>
 
-<div class="row">
-  <div class="field">
-    <label>Номер / имя прошивки</label>
-    <input type="text" id="query" placeholder="напр. 4G0907115P или ME17.9.21" autocomplete="off">
+<!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
+<div id="app">
+  <div class="row">
+    <div class="field">
+      <label>Номер / имя прошивки</label>
+      <input type="text" id="query" placeholder="напр. 4G0907115P или ME17.9.21" autocomplete="off">
+    </div>
+    <button class="go" id="btnFind">Найти</button>
+    <button id="btnAll">Показать всё</button>
+    <button class="stop" id="btnStop" disabled>■ Стоп</button>
   </div>
-  <button class="go" id="btnFind">Найти</button>
-  <button id="btnAll">Показать всё</button>
-</div>
+  <label class="toggle"><input type="checkbox" id="deep" checked> искать в подпапках</label>
 
-<label class="toggle"><input type="checkbox" id="deep" checked> искать в подпапках</label>
+  <div id="status"></div>
+  <div class="list" id="results"></div>
 
-<div id="status"></div>
-<div class="list" id="results"></div>
-
-<div class="hint">
-  Папка должна быть открыта по публичной ссылке (в Диске: «Поделиться» → ссылка).
-  Поиск идёт по подстроке в имени файла — регистр не важен.<br>
-  Если браузер выдаст ошибку сети/CORS — открой этот файл по <code>https://</code>
-  (GitHub Pages), а не как локальный <code>file://</code>.
+  <div class="hint">
+    Поиск идёт по подстроке в имени файла — регистр не важен.
+    «Стоп» прерывает сканирование больших папок.
+  </div>
 </div>
 
 <script>
 const API = 'https://cloud-api.yandex.net/v1/disk/public/resources';
+const FOLDER = 'https://disk.yandex.ru/d/E2y9mUVv5hP5-Q';   // зашитая ссылка (в UI не показывается)
+const PASS = '5230';
+
 const $ = id => document.getElementById(id);
+
+/* ---------- БЛОКИРОВКА ---------- */
+function tryUnlock(){
+  if($('pass').value.trim() === PASS){
+    $('lock').style.display = 'none';
+    $('app').style.display = 'block';
+    const l = $('lockLabel'); l.textContent = 'разблокировано 🔓'; l.className = 'lockstate ok';
+    $('query').focus();
+  } else {
+    const box = $('lock'); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
+    $('lockMsg').textContent = 'Неверный пароль';
+    $('pass').value = ''; $('pass').focus();
+  }
+}
+$('unlock').addEventListener('click', tryUnlock);
+$('pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+
+/* ---------- ПОИСК ---------- */
 const statusEl = $('status'), resultsEl = $('results');
-
-// восстановить сохранённую ссылку
-$('folder').value = localStorage.getItem('yd_folder') || '';
-$('folder').addEventListener('input', e => localStorage.setItem('yd_folder', e.target.value.trim()));
-
 function setStatus(html, err=false){ statusEl.className = err?'err':''; statusEl.innerHTML = html; }
 function fmtSize(b){ if(b==null) return ''; const u=['Б','КБ','МБ','ГБ']; let i=0,n=b;
   while(n>=1024&&i<u.length-1){n/=1024;i++;} return n.toFixed(i?1:0)+' '+u[i]; }
 
-// получить полный список файлов (с рекурсией)
-async function crawl(publicKey, deep){
-  const files = [];
-  let folders = 0, requests = 0;
-  const MAX_REQ = 400; // предохранитель от бесконечного обхода
+let cache=null, cacheKey='', searching=false, controller=null;
 
+async function crawl(publicKey, deep){
+  const files=[]; let folders=0, requests=0; const MAX_REQ=400;
   async function listOne(path){
-    let offset = 0; const limit = 200;
+    let offset=0; const limit=200;
     while(true){
+      if(controller.signal.aborted) throw new DOMException('Aborted','AbortError');
       if(requests++ > MAX_REQ) throw new Error('Слишком большая папка — обход прерван.');
-      const u = new URL(API);
-      u.searchParams.set('public_key', publicKey);
-      if(path) u.searchParams.set('path', path);
-      u.searchParams.set('limit', limit);
-      u.searchParams.set('offset', offset);
-      u.searchParams.set('sort', 'name');
-      const r = await fetch(u);
-      if(!r.ok){
-        if(r.status===404) throw new Error('Папка не найдена — проверь ссылку.');
-        throw new Error('Ошибка API: '+r.status);
-      }
-      const data = await r.json();
-      const emb = data._embedded;
-      if(!emb) break;
-      const subdirs = [];
-      for(const it of emb.items){
-        if(it.type==='file') files.push(it);
-        else if(it.type==='dir') subdirs.push(it.path);
-      }
-      const total = emb.total||emb.items.length;
-      offset += limit;
-      // подпапки обходим после текущей страницы
-      if(deep) for(const p of subdirs){ folders++; setStatus(`Сканирую… файлов: <b>${files.length}</b>, папок: ${folders}`); await listOne(p); }
-      if(offset >= total) break;
+      const u=new URL(API);
+      u.searchParams.set('public_key',publicKey);
+      if(path) u.searchParams.set('path',path);
+      u.searchParams.set('limit',limit);
+      u.searchParams.set('offset',offset);
+      u.searchParams.set('sort','name');
+      const r=await fetch(u,{signal:controller.signal});
+      if(!r.ok){ if(r.status===404) throw new Error('Папка не найдена — проверь ссылку.');
+        throw new Error('Ошибка API: '+r.status); }
+      const data=await r.json(); const emb=data._embedded; if(!emb) break;
+      const subdirs=[];
+      for(const it of emb.items){ if(it.type==='file') files.push(it); else if(it.type==='dir') subdirs.push(it.path); }
+      const total=emb.total||emb.items.length; offset+=limit;
+      if(deep) for(const p of subdirs){ folders++;
+        setStatus(`Сканирую… файлов: <b>${files.length}</b>, папок: ${folders}`); await listOne(p); }
+      if(offset>=total) break;
     }
   }
-
   await listOne('');
   return files;
 }
 
-let cache = null, cacheKey = '';
-
-async function run(filterMode){
-  const key = $('folder').value.trim();
-  const q = $('query').value.trim().toLowerCase();
-  const deep = $('deep').checked;
-  resultsEl.innerHTML = '';
-
-  if(!key){ setStatus('Вставь публичную ссылку на папку.', true); return; }
-  if(filterMode && !q){ setStatus('Введи номер прошивки или нажми «Показать всё».', true); return; }
-
-  setStatus('Сканирую…');
-  try{
-    // кэшируем список, чтобы повторный поиск не дёргал API заново
-    if(cache && cacheKey === key+'|'+deep){ /* используем кэш */ }
-    else { cache = await crawl(key, deep); cacheKey = key+'|'+deep; }
-
-    let list = cache;
-    if(filterMode) list = cache.filter(f => f.name.toLowerCase().includes(q));
-
-    if(!list.length){
-      setStatus(filterMode ? `Ничего не найдено по «${$('query').value.trim()}». Всего файлов в папке: ${cache.length}.`
-                           : 'В папке нет файлов.', true);
-      return;
-    }
-    setStatus(`Найдено: <span class="count">${list.length}</span>${filterMode?` из ${cache.length}`:''}`);
-    render(list, q);
-  }catch(e){
-    setStatus((e.message||'Ошибка') + ' <br>Если это CORS/сеть — открой инструмент по https:// (GitHub Pages).', true);
-  }
+function setSearchingUI(on){
+  searching=on;
+  $('btnFind').disabled=on; $('btnAll').disabled=on; $('deep').disabled=on;
+  $('btnStop').disabled=!on;
 }
 
-function render(list, q){
-  const frag = document.createDocumentFragment();
+async function run(filterMode){
+  if(searching) return;
+  const q=$('query').value.trim().toLowerCase();
+  const deep=$('deep').checked;
+  resultsEl.innerHTML='';
+  if(filterMode && !q){ setStatus('Введи номер прошивки или нажми «Показать всё».',true); return; }
+
+  controller=new AbortController();
+  setSearchingUI(true);
+  setStatus('Сканирую…');
+  try{
+    if(!(cache && cacheKey===deep+'')){ cache=await crawl(FOLDER,deep); cacheKey=deep+''; }
+    let list=cache;
+    if(filterMode) list=cache.filter(f=>f.name.toLowerCase().includes(q));
+    if(!list.length){
+      setStatus(filterMode?`Ничего не найдено по «${$('query').value.trim()}». Всего файлов: ${cache.length}.`
+                          :'В папке нет файлов.',true);
+    } else {
+      setStatus(`Найдено: <span class="count">${list.length}</span>${filterMode?` из ${cache.length}`:''}`);
+      render(list,q);
+    }
+  }catch(e){
+    if(e.name==='AbortError') setStatus('Поиск остановлен.',true);
+    else setStatus((e.message||'Ошибка')+' <br>Если это CORS/сеть — открой по https:// (GitHub Pages).',true);
+  }finally{ setSearchingUI(false); controller=null; }
+}
+
+function render(list,q){
+  const frag=document.createDocumentFragment();
   for(const f of list){
-    const div = document.createElement('div');
-    div.className = 'item';
-    let nameHtml = f.name;
-    if(q){ const i = f.name.toLowerCase().indexOf(q);
-      if(i>=0) nameHtml = f.name.slice(0,i)+'<span class="hit">'+f.name.slice(i,i+q.length)+'</span>'+f.name.slice(i+q.length); }
-    const path = (f.path||'').replace(/^disk:\//,'').replace('/'+f.name,'');
-    div.innerHTML =
-      `<div class="meta">
-         <div class="name">${nameHtml}</div>
-         ${path?`<div class="path">${path}/</div>`:''}
-         <div class="size">${fmtSize(f.size)}</div>
-       </div>`;
-    const a = document.createElement('a');
-    a.className = 'dl'; a.textContent = '↓ Скачать';
-    a.href = f.file || '#'; a.rel = 'noopener';
-    if(f.file) a.setAttribute('download', f.name);
-    div.appendChild(a);
-    frag.appendChild(div);
+    const div=document.createElement('div'); div.className='item';
+    let nameHtml=f.name;
+    if(q){ const i=f.name.toLowerCase().indexOf(q);
+      if(i>=0) nameHtml=f.name.slice(0,i)+'<span class="hit">'+f.name.slice(i,i+q.length)+'</span>'+f.name.slice(i+q.length); }
+    const path=(f.path||'').replace(/^disk:\//,'').replace('/'+f.name,'');
+    div.innerHTML=`<div class="meta"><div class="name">${nameHtml}</div>`+
+      (path?`<div class="path">${path}/</div>`:'')+`<div class="size">${fmtSize(f.size)}</div></div>`;
+    const btn=document.createElement('button'); btn.className='dl'; btn.textContent='↓ Скачать';
+    btn.addEventListener('click',()=>download(f.path,f.file,f.name,btn));
+    div.appendChild(btn); frag.appendChild(div);
   }
   resultsEl.appendChild(frag);
 }
 
-$('btnFind').addEventListener('click', ()=>run(true));
-$('btnAll').addEventListener('click', ()=>run(false));
-$('query').addEventListener('keydown', e=>{ if(e.key==='Enter') run(true); });
-// сброс кэша при смене папки
-$('folder').addEventListener('change', ()=>{ cache=null; cacheKey=''; });
-$('deep').addEventListener('change', ()=>{ cache=null; cacheKey=''; });
+async function download(path,fileFallback,name,btn){
+  const old=btn.textContent; btn.textContent='…'; btn.disabled=true;
+  try{
+    let href=null;
+    if(path){
+      const u=new URL(API+'/download');
+      u.searchParams.set('public_key',FOLDER); u.searchParams.set('path',path);
+      const r=await fetch(u); if(r.ok){ const d=await r.json(); href=d.href; }
+    }
+    if(!href) href=fileFallback;
+    if(!href) throw new Error('нет ссылки');
+    const a=document.createElement('a'); a.href=href; a.rel='noopener';
+    document.body.appendChild(a); a.click(); a.remove();
+    btn.textContent=old;
+  }catch(e){ btn.textContent='ошибка'; setTimeout(()=>{btn.textContent=old;},2000); }
+  finally{ btn.disabled=false; }
+}
+
+$('btnFind').addEventListener('click',()=>run(true));
+$('btnAll').addEventListener('click',()=>run(false));
+$('btnStop').addEventListener('click',()=>{ if(controller) controller.abort(); });
+$('query').addEventListener('keydown',e=>{ if(e.key==='Enter') run(true); });
+$('deep').addEventListener('change',()=>{ cache=null; cacheKey=''; });
 </script>
 </body>
 </html>
