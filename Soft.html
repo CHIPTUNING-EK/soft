@@ -19,13 +19,12 @@
   h1 .bar{display:inline-block;width:10px;height:16px;background:var(--heat);
     margin-right:9px;vertical-align:-2px;border-radius:1px}
   .sub{color:var(--muted);font-size:11.5px}
-  .sub .lockstate{color:var(--red)}
-  .sub .lockstate.ok{color:var(--amber)}
+  .sub .lockstate{color:var(--red)} .sub .lockstate.ok{color:var(--amber)}
   label{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;
     letter-spacing:1px;margin:0 0 6px}
   input[type=text],input[type=password]{width:100%;background:var(--panel);
     border:1px solid var(--line);color:var(--txt);padding:11px 12px;border-radius:8px;
-    font:inherit;font-size:13.5px;letter-spacing:1px}
+    font:inherit;font-size:13.5px}
   input:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 2px rgba(255,106,26,.15)}
   .field{margin-bottom:14px}
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -38,34 +37,47 @@
   button.go:hover:not(:disabled){filter:brightness(1.08)}
   button.stop{border-color:#5a2020;color:#ff8b7a}
   button.stop:hover:not(:disabled){border-color:var(--red);background:#2a1010}
-  .toggle{display:flex;align-items:center;gap:8px;color:var(--muted);
-    font-size:12px;cursor:pointer;user-select:none;margin:12px 0 4px}
+  .sources{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;margin-bottom:14px}
+  .sources .cap{color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:1px;margin-bottom:9px}
+  .cb{display:flex;align-items:center;gap:9px;font-size:13px;padding:5px 0;cursor:pointer;user-select:none}
+  .cb input{accent-color:var(--orange);width:16px;height:16px;flex-shrink:0}
+  .toggle{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;
+    cursor:pointer;user-select:none;margin:12px 0 4px}
   .toggle input{accent-color:var(--orange);width:15px;height:15px}
-  #status{margin:16px 0 10px;font-size:12px;color:var(--muted);min-height:16px}
-  #status b{color:var(--amber)}
-  .err{color:#ff8b7a !important}
-  .count{color:var(--txt)}
+  .statbar{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;margin:16px 0 10px}
+  #status{font-size:12px;color:var(--muted);min-height:16px;flex:1;min-width:160px}
+  #status b{color:var(--amber)} .err{color:#ff8b7a !important} .count{color:var(--txt)}
+  #timer{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--line);
+    border-radius:7px;padding:5px 10px;white-space:nowrap}
+  #timer b{color:var(--amber)}
   .list{display:flex;flex-direction:column;gap:8px}
   .item{background:var(--panel);border:1px solid var(--line);border-radius:9px;
     padding:12px 13px;display:flex;flex-direction:column;align-items:stretch}
-  .item .meta{min-width:0}
   .item .name{font-size:13.5px;word-break:break-all}
   .item .name .hit{background:rgba(255,176,32,.22);color:var(--amber);border-radius:3px;padding:0 2px}
   .item .path{color:var(--muted);font-size:11px;margin-top:3px;word-break:break-all}
+  .item .path .src{color:var(--orange)}
   .item .size{color:var(--muted);font-size:11px;margin-top:2px}
   .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
-  .dl,.act{border:1px solid var(--line);padding:9px 13px;border-radius:8px;
-    font:inherit;font-size:12px;cursor:pointer;transition:.15s;white-space:nowrap}
-  .dl{background:var(--panel-2);color:var(--amber)}
-  .dl:hover:not(:disabled){border-color:var(--orange);background:#26160a}
+  .dl,.act{border:1px solid var(--line);padding:9px 14px;border-radius:8px;font:inherit;
+    font-size:12px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .dl{background:var(--heat);border:none;color:#120a02;font-weight:700}
+  .dl:hover:not(:disabled){filter:brightness(1.08)}
   .act{background:var(--panel-2);color:var(--muted)}
   .act:hover:not(:disabled){border-color:var(--orange);color:var(--txt)}
   .dl:disabled,.act:disabled{opacity:.45;cursor:not-allowed}
-  .linkbox{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);
-    border-radius:8px;padding:9px 11px}
+  .linkbox{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:9px 11px}
   .rawlink{display:block;color:var(--amber);font-size:11.5px;word-break:break-all;text-decoration:none}
   .rawlink:active,.rawlink:hover{text-decoration:underline}
   .linkhint{color:var(--muted);font-size:10.5px;margin-top:6px;line-height:1.5}
+  /* блок изменения ссылок */
+  .editwrap{margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+  #editPanel{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:14px;margin-top:12px}
+  #editPanel.shake{animation:shk .35s}
+  #editPanel .msg{color:#ff8b7a;font-size:11.5px;height:14px;margin-top:8px}
+  #editPanel .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
   /* экран блокировки */
   #lock{background:var(--panel);border:1px solid var(--line);border-radius:12px;
     padding:26px 22px;text-align:center;max-width:340px;margin:40px auto}
@@ -78,8 +90,6 @@
   @keyframes shk{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
   #lock .msg{color:#ff8b7a;font-size:11.5px;height:14px;margin-top:8px}
   #app{display:none}
-  .hint{margin-top:20px;padding-top:14px;border-top:1px solid var(--line);
-    color:var(--muted);font-size:11px;line-height:1.7}
 </style>
 </head>
 <body>
@@ -88,7 +98,7 @@
   <div class="sub">Статус: <span class="lockstate" id="lockLabel">заблокировано 🔒</span></div>
 </header>
 
-<!-- ЭКРАН БЛОКИРОВКИ -->
+<!-- БЛОКИРОВКА -->
 <div id="lock">
   <div class="ico">🔒</div>
   <h2>ПОИСК ЗАБЛОКИРОВАН</h2>
@@ -98,8 +108,14 @@
   <div class="msg" id="lockMsg"></div>
 </div>
 
-<!-- ОСНОВНОЙ ИНТЕРФЕЙС -->
+<!-- ПРИЛОЖЕНИЕ -->
 <div id="app">
+  <div class="sources">
+    <div class="cap">Где искать</div>
+    <label class="cb"><input type="checkbox" id="cbClients" checked> Клиенты</label>
+    <label class="cb"><input type="checkbox" id="cbShop" checked> Магазин (только Евро2)</label>
+  </div>
+
   <div class="row">
     <div class="field">
       <label>Номер / имя прошивки</label>
@@ -111,47 +127,83 @@
   </div>
   <label class="toggle"><input type="checkbox" id="deep" checked> искать в подпапках</label>
 
-  <div id="status"></div>
+  <div class="statbar">
+    <div id="status"></div>
+    <div id="timer">⏱ —</div>
+  </div>
   <div class="list" id="results"></div>
 
-  <div class="hint">
-    Поиск идёт по подстроке в имени файла — регистр не важен.
-    «Стоп» прерывает сканирование больших папок.
+  <!-- ИЗМЕНИТЬ ССЫЛКИ -->
+  <div class="editwrap">
+    <button class="act" id="btnEdit">✎ Изменить ссылки</button>
+    <div id="editPanel" hidden>
+      <div id="editPass">
+        <div class="field">
+          <label>Пароль для изменения</label>
+          <input type="password" id="editPassInput" inputmode="numeric" placeholder="••••" autocomplete="off">
+        </div>
+        <div class="btns">
+          <button class="go" id="editPassBtn">Ок</button>
+          <button class="act" id="editCancel1">Отмена</button>
+        </div>
+        <div class="msg" id="editMsg"></div>
+      </div>
+      <div id="editFields" hidden>
+        <div class="field"><label>Ссылка «Клиенты»</label><input type="text" id="urlClients"></div>
+        <div class="field"><label>Ссылка «Магазин (только Евро2)»</label><input type="text" id="urlShop"></div>
+        <div class="btns">
+          <button class="go" id="editSave">Сохранить</button>
+          <button class="act" id="editCancel2">Отмена</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-const API = 'https://cloud-api.yandex.net/v1/disk/public/resources';
-const FOLDER = 'https://disk.yandex.ru/d/E2y9mUVv5hP5-Q';   // зашитая ссылка (в UI не показывается)
-const PASS = '5230';
+const API='https://cloud-api.yandex.net/v1/disk/public/resources';
+const PASS_UNLOCK='5230';
+const PASS_EDIT='2580';
+const DEFAULTS={
+  clients:{name:'Клиенты', url:'https://disk.yandex.ru/d/gC6FL2TBl1b25Q'},
+  shop:{name:'Магазин (только Евро2)', url:'https://disk.yandex.ru/d/psBxTNkiFyQTjg'}
+};
+const ALLOWED=['.bin','.bcf'];
+const $=id=>document.getElementById(id);
 
-const $ = id => document.getElementById(id);
+/* источники + сохранение изменённых ссылок */
+function loadSources(){
+  let s={}; try{ s=JSON.parse(localStorage.getItem('fw_sources')||'{}'); }catch(_){}
+  return {
+    clients:{name:DEFAULTS.clients.name, url:s.clients||DEFAULTS.clients.url},
+    shop:{name:DEFAULTS.shop.name, url:s.shop||DEFAULTS.shop.url}
+  };
+}
+let SRC=loadSources();
+function saveSources(){ localStorage.setItem('fw_sources',JSON.stringify({clients:SRC.clients.url, shop:SRC.shop.url})); }
 
 /* ---------- БЛОКИРОВКА ---------- */
 function tryUnlock(){
-  if($('pass').value.trim() === PASS){
-    $('lock').style.display = 'none';
-    $('app').style.display = 'block';
-    const l = $('lockLabel'); l.textContent = 'разблокировано 🔓'; l.className = 'lockstate ok';
+  if($('pass').value.trim()===PASS_UNLOCK){
+    $('lock').style.display='none'; $('app').style.display='block';
+    const l=$('lockLabel'); l.textContent='разблокировано 🔓'; l.className='lockstate ok';
     $('query').focus();
-  } else {
-    const box = $('lock'); box.classList.remove('shake'); void box.offsetWidth; box.classList.add('shake');
-    $('lockMsg').textContent = 'Неверный пароль';
-    $('pass').value = ''; $('pass').focus();
-  }
+  } else { shake($('lock')); $('lockMsg').textContent='Неверный пароль'; $('pass').value=''; $('pass').focus(); }
 }
-$('unlock').addEventListener('click', tryUnlock);
-$('pass').addEventListener('keydown', e=>{ if(e.key==='Enter') tryUnlock(); });
+function shake(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+$('unlock').addEventListener('click',tryUnlock);
+$('pass').addEventListener('keydown',e=>{ if(e.key==='Enter') tryUnlock(); });
 
 /* ---------- ПОИСК ---------- */
-const statusEl = $('status'), resultsEl = $('results');
-function setStatus(html, err=false){ statusEl.className = err?'err':''; statusEl.innerHTML = html; }
+const statusEl=$('status'), resultsEl=$('results');
+function setStatus(html,err=false){ statusEl.className=err?'err':''; statusEl.innerHTML=html; }
+function setTime(sec){ $('timer').innerHTML='⏱ <b>'+sec+'</b> с'; }
+function isFw(name){ const n=name.toLowerCase(); return ALLOWED.some(e=>n.endsWith(e)); }
 function fmtSize(b){ if(b==null) return ''; const u=['Б','КБ','МБ','ГБ']; let i=0,n=b;
   while(n>=1024&&i<u.length-1){n/=1024;i++;} return n.toFixed(i?1:0)+' '+u[i]; }
 
-let cache=null, cacheKey='', searching=false, controller=null;
-const ALLOWED=['.bin','.bcf'];
-function isFw(name){ const n=name.toLowerCase(); return ALLOWED.some(e=>n.endsWith(e)); }
+let searching=false, controller=null;
+const srcCache={};   // ключ url|deep -> файлы[]
 
 async function crawl(publicKey, deep){
   const files=[]; let folders=0, requests=0; const MAX_REQ=400;
@@ -163,12 +215,10 @@ async function crawl(publicKey, deep){
       const u=new URL(API);
       u.searchParams.set('public_key',publicKey);
       if(path) u.searchParams.set('path',path);
-      u.searchParams.set('limit',limit);
-      u.searchParams.set('offset',offset);
-      u.searchParams.set('sort','name');
+      u.searchParams.set('limit',limit); u.searchParams.set('offset',offset); u.searchParams.set('sort','name');
       const r=await fetch(u,{signal:controller.signal});
-      if(!r.ok){ if(r.status===404) throw new Error('Папка не найдена — проверь ссылку.');
-        throw new Error('Ошибка API: '+r.status); }
+      if(!r.ok){ if(r.status===404) throw new Error('Папка не найдена: '+publicKey);
+        throw new Error('Ошибка API '+r.status); }
       const data=await r.json(); const emb=data._embedded; if(!emb) break;
       const subdirs=[];
       for(const it of emb.items){ if(it.type==='file') files.push(it); else if(it.type==='dir') subdirs.push(it.path); }
@@ -182,9 +232,19 @@ async function crawl(publicKey, deep){
   return files;
 }
 
+async function crawlSource(src, deep){
+  const key=src.url+'|'+deep;
+  if(srcCache[key]) return srcCache[key];
+  setStatus(`Сканирую: ${src.name}…`);
+  const files=await crawl(src.url, deep);
+  files.forEach(f=>{ f._pub=src.url; f._src=src.name; });
+  srcCache[key]=files;
+  return files;
+}
+
 function setSearchingUI(on){
   searching=on;
-  $('btnFind').disabled=on; $('btnAll').disabled=on; $('deep').disabled=on;
+  ['btnFind','btnAll','cbClients','cbShop','deep','btnEdit'].forEach(id=>$(id).disabled=on);
   $('btnStop').disabled=!on;
 }
 
@@ -192,17 +252,21 @@ async function run(filterMode){
   if(searching) return;
   const q=$('query').value.trim().toLowerCase();
   const deep=$('deep').checked;
+  const selected=[];
+  if($('cbClients').checked) selected.push(SRC.clients);
+  if($('cbShop').checked) selected.push(SRC.shop);
   resultsEl.innerHTML='';
+  if(!selected.length){ setStatus('Отметь хотя бы одну папку.',true); return; }
   if(filterMode && !q){ setStatus('Введи номер прошивки или нажми «Показать всё».',true); return; }
 
-  controller=new AbortController();
-  setSearchingUI(true);
-  setStatus('Сканирую…');
+  controller=new AbortController(); setSearchingUI(true); setStatus('Сканирую…');
+  const t0=performance.now();
   try{
-    if(!(cache && cacheKey===deep+'')){ cache=await crawl(FOLDER,deep); cacheKey=deep+''; }
-    const base=cache.filter(f=>isFw(f.name));
-    let list=base;
-    if(filterMode) list=base.filter(f=>f.name.toLowerCase().includes(q));
+    let all=[];
+    for(const s of selected){ const fs=await crawlSource(s,deep); all=all.concat(fs); }
+    const base=all.filter(f=>isFw(f.name));
+    let list=base; if(filterMode) list=base.filter(f=>f.name.toLowerCase().includes(q));
+    setTime(((performance.now()-t0)/1000).toFixed(1));
     if(!list.length){
       setStatus(filterMode?`Ничего не найдено по «${$('query').value.trim()}». Файлов .bin/.bcf: ${base.length}.`
                           :'Нет файлов .bin/.bcf.',true);
@@ -211,8 +275,9 @@ async function run(filterMode){
       render(list,q);
     }
   }catch(e){
+    setTime(((performance.now()-t0)/1000).toFixed(1));
     if(e.name==='AbortError') setStatus('Поиск остановлен.',true);
-    else setStatus((e.message||'Ошибка')+' <br>Если это CORS/сеть — открой по https:// (GitHub Pages).',true);
+    else setStatus((e.message||'Ошибка')+' <br>Если CORS/сеть — открой по https:// (GitHub Pages).',true);
   }finally{ setSearchingUI(false); controller=null; }
 }
 
@@ -223,27 +288,26 @@ function render(list,q){
     let nameHtml=f.name;
     if(q){ const i=f.name.toLowerCase().indexOf(q);
       if(i>=0) nameHtml=f.name.slice(0,i)+'<span class="hit">'+f.name.slice(i,i+q.length)+'</span>'+f.name.slice(i+q.length); }
-    const path=(f.path||'').replace(/^disk:\//,'').replace('/'+f.name,'');
-
+    let path=(f.path||'').replace(/^disk:\//,'').replace('/'+f.name,'');
     const meta=document.createElement('div'); meta.className='meta';
     meta.innerHTML=`<div class="name">${nameHtml}</div>`+
-      (path?`<div class="path">${path}/</div>`:'')+`<div class="size">${fmtSize(f.size)}</div>`;
+      `<div class="path"><span class="src">${f._src||''}</span>${path?' / '+path+'/':''}</div>`+
+      `<div class="size">${fmtSize(f.size)}</div>`;
     const linkbox=document.createElement('div'); linkbox.className='linkbox'; linkbox.hidden=true;
     meta.appendChild(linkbox);
 
     const actions=document.createElement('div'); actions.className='actions';
-    const bDl=mkBtn('↓ Скачать','dl'), bLink=mkBtn('🔗 Ссылка','act'), bShare=mkBtn('⇪ Поделиться','act');
-    bDl.onclick   =()=>withBusy(bDl,   async()=>{ const h=await resolveHref(f); window.location.href=h; });
-    bLink.onclick =()=>withBusy(bLink, async()=>{ showLink(linkbox, await resolveHref(f)); });
-    bShare.onclick=()=>withBusy(bShare,async()=>{ await shareUrl(await resolveHref(f), f.name, linkbox); });
-    actions.append(bDl,bLink,bShare);
+    const bDl=mkBtn('СКАЧАТЬ','dl'), bLink=mkBtn('🔗 Ссылка','act');
+    bDl.onclick  =()=>withBusy(bDl,  async()=>{ await doDownload(f); });
+    bLink.onclick=()=>withBusy(bLink,async()=>{ showLink(linkbox, await resolveHref(f)); });
+    actions.append(bDl,bLink);
 
     div.append(meta,actions); frag.appendChild(div);
   }
   resultsEl.appendChild(frag);
 }
 
-function mkBtn(text,cls){ const b=document.createElement('button'); b.className=cls; b.textContent=text; return b; }
+function mkBtn(t,c){ const b=document.createElement('button'); b.className=c; b.textContent=t; return b; }
 
 async function withBusy(btn,fn){
   const old=btn.textContent; btn.disabled=true; btn.textContent='…';
@@ -253,20 +317,28 @@ async function withBusy(btn,fn){
   finally{ btn.disabled=false; }
 }
 
-// свежая прямая ссылка через /download, кэшируется на файле
 async function resolveHref(f){
   if(f._href) return f._href;
   let href=null, apiErr='';
-  if(f.path){
+  if(f.path && f._pub){
     const p=f.path.replace(/^disk:/,'');
     const u=new URL(API+'/download');
-    u.searchParams.set('public_key',FOLDER); u.searchParams.set('path',p);
+    u.searchParams.set('public_key',f._pub); u.searchParams.set('path',p);
     const r=await fetch(u);
     if(r.ok){ href=(await r.json()).href; } else apiErr='HTTP '+r.status;
   }
   if(!href) href=f.file;
   if(!href) throw new Error(apiErr||'нет ссылки');
   f._href=href; console.log('href:',href); return href;
+}
+
+async function doDownload(f){
+  const href=await resolveHref(f);
+  if(navigator.share){
+    try{ await navigator.share({title:f.name, url:href}); return; }
+    catch(e){ if(e.name==='AbortError') return; }
+  }
+  window.location.href=href;   // десктоп: прямое скачивание
 }
 
 function showLink(box,href){
@@ -280,21 +352,34 @@ function showLink(box,href){
     .then(()=>{ hint.textContent='Скопировано ✓ · нажми, чтобы открыть'; }).catch(()=>{});
 }
 
-async function shareUrl(href,name,box){
-  if(navigator.share){
-    try{ await navigator.share({title:name, url:href}); }
-    catch(e){ if(e.name!=='AbortError') throw e; }
-  } else {
-    if(navigator.clipboard){ try{ await navigator.clipboard.writeText(href); }catch(_){} }
-    showLink(box,href);
-  }
+/* ---------- ИЗМЕНИТЬ ССЫЛКИ ---------- */
+function closeEdit(){ $('editPanel').hidden=true; $('editPass').hidden=false; $('editFields').hidden=true;
+  $('editPassInput').value=''; $('editMsg').textContent=''; }
+$('btnEdit').addEventListener('click',()=>{ const p=$('editPanel'); if(p.hidden){ closeEdit(); p.hidden=false; $('editPassInput').focus(); } else closeEdit(); });
+$('editCancel1').addEventListener('click',closeEdit);
+$('editCancel2').addEventListener('click',closeEdit);
+function editUnlock(){
+  if($('editPassInput').value.trim()===PASS_EDIT){
+    $('editPass').hidden=true; $('editFields').hidden=false;
+    $('urlClients').value=SRC.clients.url; $('urlShop').value=SRC.shop.url;
+  } else { shake($('editPanel')); $('editMsg').textContent='Неверный пароль'; $('editPassInput').value=''; }
 }
+$('editPassBtn').addEventListener('click',editUnlock);
+$('editPassInput').addEventListener('keydown',e=>{ if(e.key==='Enter') editUnlock(); });
+$('editSave').addEventListener('click',()=>{
+  SRC.clients.url=$('urlClients').value.trim()||DEFAULTS.clients.url;
+  SRC.shop.url=$('urlShop').value.trim()||DEFAULTS.shop.url;
+  saveSources();
+  for(const k in srcCache) delete srcCache[k];   // сброс кэша под новые ссылки
+  closeEdit();
+  setStatus('Ссылки обновлены ✓'); setTime('—');
+});
 
+/* кнопки поиска */
 $('btnFind').addEventListener('click',()=>run(true));
 $('btnAll').addEventListener('click',()=>run(false));
 $('btnStop').addEventListener('click',()=>{ if(controller) controller.abort(); });
 $('query').addEventListener('keydown',e=>{ if(e.key==='Enter') run(true); });
-$('deep').addEventListener('change',()=>{ cache=null; cacheKey=''; });
 </script>
 </body>
 </html>
