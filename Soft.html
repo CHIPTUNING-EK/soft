@@ -47,15 +47,25 @@
   .count{color:var(--txt)}
   .list{display:flex;flex-direction:column;gap:8px}
   .item{background:var(--panel);border:1px solid var(--line);border-radius:9px;
-    padding:12px 13px;display:flex;gap:12px;align-items:center}
-  .item .meta{flex:1;min-width:0}
+    padding:12px 13px;display:flex;flex-direction:column;align-items:stretch}
+  .item .meta{min-width:0}
   .item .name{font-size:13.5px;word-break:break-all}
   .item .name .hit{background:rgba(255,176,32,.22);color:var(--amber);border-radius:3px;padding:0 2px}
   .item .path{color:var(--muted);font-size:11px;margin-top:3px;word-break:break-all}
   .item .size{color:var(--muted);font-size:11px;margin-top:2px}
-  .dl{flex-shrink:0;background:var(--panel-2);border:1px solid var(--line);color:var(--amber);
-    padding:9px 13px;border-radius:8px;font-size:12px;white-space:nowrap;cursor:pointer;transition:.15s}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+  .dl,.act{border:1px solid var(--line);padding:9px 13px;border-radius:8px;
+    font:inherit;font-size:12px;cursor:pointer;transition:.15s;white-space:nowrap}
+  .dl{background:var(--panel-2);color:var(--amber)}
   .dl:hover:not(:disabled){border-color:var(--orange);background:#26160a}
+  .act{background:var(--panel-2);color:var(--muted)}
+  .act:hover:not(:disabled){border-color:var(--orange);color:var(--txt)}
+  .dl:disabled,.act:disabled{opacity:.45;cursor:not-allowed}
+  .linkbox{margin-top:10px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:8px;padding:9px 11px}
+  .rawlink{display:block;color:var(--amber);font-size:11.5px;word-break:break-all;text-decoration:none}
+  .rawlink:active,.rawlink:hover{text-decoration:underline}
+  .linkhint{color:var(--muted);font-size:10.5px;margin-top:6px;line-height:1.5}
   /* экран блокировки */
   #lock{background:var(--panel);border:1px solid var(--line);border-radius:12px;
     padding:26px 22px;text-align:center;max-width:340px;margin:40px auto}
@@ -214,33 +224,70 @@ function render(list,q){
     if(q){ const i=f.name.toLowerCase().indexOf(q);
       if(i>=0) nameHtml=f.name.slice(0,i)+'<span class="hit">'+f.name.slice(i,i+q.length)+'</span>'+f.name.slice(i+q.length); }
     const path=(f.path||'').replace(/^disk:\//,'').replace('/'+f.name,'');
-    div.innerHTML=`<div class="meta"><div class="name">${nameHtml}</div>`+
-      (path?`<div class="path">${path}/</div>`:'')+`<div class="size">${fmtSize(f.size)}</div></div>`;
-    const btn=document.createElement('button'); btn.className='dl'; btn.textContent='↓ Скачать';
-    btn.addEventListener('click',()=>download(f.path,f.file,btn));
-    div.appendChild(btn); frag.appendChild(div);
+
+    const meta=document.createElement('div'); meta.className='meta';
+    meta.innerHTML=`<div class="name">${nameHtml}</div>`+
+      (path?`<div class="path">${path}/</div>`:'')+`<div class="size">${fmtSize(f.size)}</div>`;
+    const linkbox=document.createElement('div'); linkbox.className='linkbox'; linkbox.hidden=true;
+    meta.appendChild(linkbox);
+
+    const actions=document.createElement('div'); actions.className='actions';
+    const bDl=mkBtn('↓ Скачать','dl'), bLink=mkBtn('🔗 Ссылка','act'), bShare=mkBtn('⇪ Поделиться','act');
+    bDl.onclick   =()=>withBusy(bDl,   async()=>{ const h=await resolveHref(f); window.location.href=h; });
+    bLink.onclick =()=>withBusy(bLink, async()=>{ showLink(linkbox, await resolveHref(f)); });
+    bShare.onclick=()=>withBusy(bShare,async()=>{ await shareUrl(await resolveHref(f), f.name, linkbox); });
+    actions.append(bDl,bLink,bShare);
+
+    div.append(meta,actions); frag.appendChild(div);
   }
   resultsEl.appendChild(frag);
 }
 
-async function download(path,fileFallback,btn){
-  const old=btn.textContent; btn.textContent='…'; btn.disabled=true;
-  try{
-    let href=null, apiErr='';
-    if(path){
-      const p=path.replace(/^disk:/,'');          // срезаем префикс disk: если есть
-      const u=new URL(API+'/download');
-      u.searchParams.set('public_key',FOLDER); u.searchParams.set('path',p);
-      const r=await fetch(u);
-      if(r.ok){ href=(await r.json()).href; } else apiErr='HTTP '+r.status;
-    }
-    if(!href) href=fileFallback;                   // запасной вариант
-    if(!href) throw new Error(apiErr||'нет ссылки');
-    console.log('download href:',href);
-    window.location.href=href;                     // прямой переход = файл качается
-    btn.textContent=old;
-  }catch(e){ btn.textContent='ошибка'; console.error('download:',e); setTimeout(()=>{btn.textContent=old;},2500); }
+function mkBtn(text,cls){ const b=document.createElement('button'); b.className=cls; b.textContent=text; return b; }
+
+async function withBusy(btn,fn){
+  const old=btn.textContent; btn.disabled=true; btn.textContent='…';
+  try{ await fn(); btn.textContent=old; }
+  catch(e){ if(e&&e.name==='AbortError'){ btn.textContent=old; }
+    else{ console.error(e); btn.textContent='ошибка'; setTimeout(()=>{btn.textContent=old;},2200); } }
   finally{ btn.disabled=false; }
+}
+
+// свежая прямая ссылка через /download, кэшируется на файле
+async function resolveHref(f){
+  if(f._href) return f._href;
+  let href=null, apiErr='';
+  if(f.path){
+    const p=f.path.replace(/^disk:/,'');
+    const u=new URL(API+'/download');
+    u.searchParams.set('public_key',FOLDER); u.searchParams.set('path',p);
+    const r=await fetch(u);
+    if(r.ok){ href=(await r.json()).href; } else apiErr='HTTP '+r.status;
+  }
+  if(!href) href=f.file;
+  if(!href) throw new Error(apiErr||'нет ссылки');
+  f._href=href; console.log('href:',href); return href;
+}
+
+function showLink(box,href){
+  box.innerHTML='';
+  const a=document.createElement('a'); a.className='rawlink'; a.href=href;
+  a.target='_blank'; a.rel='noopener'; a.textContent=href;
+  const hint=document.createElement('div'); hint.className='linkhint';
+  hint.textContent='Нажми — открыть в браузере · зажми — меню';
+  box.append(a,hint); box.hidden=false;
+  if(navigator.clipboard) navigator.clipboard.writeText(href)
+    .then(()=>{ hint.textContent='Скопировано ✓ · нажми, чтобы открыть'; }).catch(()=>{});
+}
+
+async function shareUrl(href,name,box){
+  if(navigator.share){
+    try{ await navigator.share({title:name, url:href}); }
+    catch(e){ if(e.name!=='AbortError') throw e; }
+  } else {
+    if(navigator.clipboard){ try{ await navigator.clipboard.writeText(href); }catch(_){} }
+    showLink(box,href);
+  }
 }
 
 $('btnFind').addEventListener('click',()=>run(true));
