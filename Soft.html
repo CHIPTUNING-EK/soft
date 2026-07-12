@@ -140,6 +140,8 @@ function fmtSize(b){ if(b==null) return ''; const u=['Б','КБ','МБ','ГБ'];
   while(n>=1024&&i<u.length-1){n/=1024;i++;} return n.toFixed(i?1:0)+' '+u[i]; }
 
 let cache=null, cacheKey='', searching=false, controller=null;
+const ALLOWED=['.bin','.bcf'];
+function isFw(name){ const n=name.toLowerCase(); return ALLOWED.some(e=>n.endsWith(e)); }
 
 async function crawl(publicKey, deep){
   const files=[]; let folders=0, requests=0; const MAX_REQ=400;
@@ -188,13 +190,14 @@ async function run(filterMode){
   setStatus('Сканирую…');
   try{
     if(!(cache && cacheKey===deep+'')){ cache=await crawl(FOLDER,deep); cacheKey=deep+''; }
-    let list=cache;
-    if(filterMode) list=cache.filter(f=>f.name.toLowerCase().includes(q));
+    const base=cache.filter(f=>isFw(f.name));
+    let list=base;
+    if(filterMode) list=base.filter(f=>f.name.toLowerCase().includes(q));
     if(!list.length){
-      setStatus(filterMode?`Ничего не найдено по «${$('query').value.trim()}». Всего файлов: ${cache.length}.`
-                          :'В папке нет файлов.',true);
+      setStatus(filterMode?`Ничего не найдено по «${$('query').value.trim()}». Файлов .bin/.bcf: ${base.length}.`
+                          :'Нет файлов .bin/.bcf.',true);
     } else {
-      setStatus(`Найдено: <span class="count">${list.length}</span>${filterMode?` из ${cache.length}`:''}`);
+      setStatus(`Найдено: <span class="count">${list.length}</span>${filterMode?` из ${base.length}`:''}`);
       render(list,q);
     }
   }catch(e){
@@ -214,27 +217,29 @@ function render(list,q){
     div.innerHTML=`<div class="meta"><div class="name">${nameHtml}</div>`+
       (path?`<div class="path">${path}/</div>`:'')+`<div class="size">${fmtSize(f.size)}</div></div>`;
     const btn=document.createElement('button'); btn.className='dl'; btn.textContent='↓ Скачать';
-    btn.addEventListener('click',()=>download(f.path,f.file,f.name,btn));
+    btn.addEventListener('click',()=>download(f.path,f.file,btn));
     div.appendChild(btn); frag.appendChild(div);
   }
   resultsEl.appendChild(frag);
 }
 
-async function download(path,fileFallback,name,btn){
+async function download(path,fileFallback,btn){
   const old=btn.textContent; btn.textContent='…'; btn.disabled=true;
   try{
-    let href=null;
+    let href=null, apiErr='';
     if(path){
+      const p=path.replace(/^disk:/,'');          // срезаем префикс disk: если есть
       const u=new URL(API+'/download');
-      u.searchParams.set('public_key',FOLDER); u.searchParams.set('path',path);
-      const r=await fetch(u); if(r.ok){ const d=await r.json(); href=d.href; }
+      u.searchParams.set('public_key',FOLDER); u.searchParams.set('path',p);
+      const r=await fetch(u);
+      if(r.ok){ href=(await r.json()).href; } else apiErr='HTTP '+r.status;
     }
-    if(!href) href=fileFallback;
-    if(!href) throw new Error('нет ссылки');
-    const a=document.createElement('a'); a.href=href; a.rel='noopener';
-    document.body.appendChild(a); a.click(); a.remove();
+    if(!href) href=fileFallback;                   // запасной вариант
+    if(!href) throw new Error(apiErr||'нет ссылки');
+    console.log('download href:',href);
+    window.location.href=href;                     // прямой переход = файл качается
     btn.textContent=old;
-  }catch(e){ btn.textContent='ошибка'; setTimeout(()=>{btn.textContent=old;},2000); }
+  }catch(e){ btn.textContent='ошибка'; console.error('download:',e); setTimeout(()=>{btn.textContent=old;},2500); }
   finally{ btn.disabled=false; }
 }
 
