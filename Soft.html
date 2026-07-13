@@ -169,7 +169,7 @@
   </div>
   <div class="list" id="results"></div>
 
-  <div class="editwrap">
+  <div class="editwrap" id="editWrap">
     <button class="act" id="btnEdit">✎ Изменить ссылки</button>
     <div id="editPanel" hidden>
       <div id="editPass">
@@ -189,7 +189,7 @@
 
 <script>
 const API='https://cloud-api.yandex.net/v1/disk/public/resources';
-const PASS_UNLOCK='5230', PASS_EDIT='2580';
+const PASS_FULL='5230', PASS_LIMITED='2580';
 const DEFAULTS={
   clients:{name:'Клиенты', url:'https://disk.yandex.ru/d/gC6FL2TBl1b25Q'},
   shop:{name:'Магазин (только Евро2)', url:'https://disk.yandex.ru/d/psBxTNkiFyQTjg'}
@@ -197,6 +197,8 @@ const DEFAULTS={
 const CLIENT_SUBS=['Русские','Пежо','Toyota','Renault','Mercedes','Honda','Ford','Chevrolet_Daewoo',
   'Мото','Китай','Грузовые','VAG','Suzuki','Subaru','Opel','Nissan_Infiniti','Mitsubishi','Mazda',
   'LR','KIA_Hyundai','Citroen','BMW'];
+const LIMITED_SUBS=['Русские','KIA_Hyundai','VAG','Opel'];
+let ROLE='full', ACTIVE_SUBS=CLIENT_SUBS.slice();
 const ALLOWED=['.bin','.bcf'];
 const $=id=>document.getElementById(id);
 
@@ -211,9 +213,13 @@ function saveSources(){ localStorage.setItem('fw_sources',JSON.stringify({client
 /* ---------- БЛОКИРОВКА ---------- */
 function shake(el){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
 function tryUnlock(){
-  if($('pass').value.trim()===PASS_UNLOCK){
+  const v=$('pass').value.trim();
+  if(v===PASS_FULL || v===PASS_LIMITED){
+    ROLE = (v===PASS_FULL) ? 'full' : 'limited';
+    configureRole();
     $('lock').style.display='none'; $('app').style.display='block';
-    const l=$('lockLabel'); l.textContent='разблокировано 🔓'; l.className='lockstate ok';
+    const l=$('lockLabel'); l.className='lockstate ok';
+    l.textContent = ROLE==='full' ? 'полный доступ 🔓' : 'магазин + клиенты (4 марки) 🔓';
     $('query').focus();
   } else { shake($('lock')); $('lockMsg').textContent='Неверный пароль'; $('pass').value=''; $('pass').focus(); }
 }
@@ -221,18 +227,29 @@ $('unlock').addEventListener('click',tryUnlock);
 $('pass').addEventListener('keydown',e=>{ if(e.key==='Enter') tryUnlock(); });
 
 /* ---------- ПОДПАПКИ КЛИЕНТОВ ---------- */
-function buildSubs(){
+function buildSubs(list){
   const box=$('subsList'); box.innerHTML='';
-  CLIENT_SUBS.forEach(n=>{
+  list.forEach(n=>{
     const l=document.createElement('label'); l.className='subcb';
     const c=document.createElement('input'); c.type='checkbox'; c.checked=true; c.dataset.sub=n;
     l.appendChild(c); l.appendChild(document.createTextNode(' '+n)); box.appendChild(l);
   });
 }
+function configureRole(){
+  ACTIVE_SUBS = (ROLE==='full') ? CLIENT_SUBS.slice() : LIMITED_SUBS.slice();
+  buildSubs(ACTIVE_SUBS);
+  $('editWrap').style.display = (ROLE==='full') ? 'block' : 'none';
+  for(const k in srcCache) delete srcCache[k];
+  syncClients(); syncShop();
+}
 function selectedSubs(){ return [...document.querySelectorAll('#subsList input:checked')].map(c=>c.dataset.sub); }
 function syncClients(){
-  const on=$('cbClients').checked; $('deepClients').disabled=!on;
-  const deepOn=on && $('deepClients').checked;
+  const on=$('cbClients').checked;
+  const dt=$('deepClients');
+  if(ROLE!=='full') dt.checked=true;                       // ограниченный: всегда по подпапкам
+  dt.closest('label').style.display=(ROLE==='full')?'flex':'none';
+  dt.disabled = !on || ROLE!=='full';
+  const deepOn = on && dt.checked;
   $('clientsSubs').style.display=deepOn?'block':'none';
   $('clientsSubs').querySelectorAll('input,button').forEach(el=>el.disabled=!deepOn);
 }
@@ -337,10 +354,15 @@ function setSearchingUI(on){
 function buildJobs(){
   const jobs=[];
   if($('cbClients').checked){
-    let deep=$('deepClients').checked, starts=[''];
-    if(deep){ const subs=selectedSubs();
-      if(subs.length && subs.length<CLIENT_SUBS.length) starts=subs.map(n=>'/'+n); }
-    jobs.push({src:SRC.clients, deep, starts});
+    if(ROLE==='full'){
+      let deep=$('deepClients').checked, starts=[''];
+      if(deep){ const subs=selectedSubs();
+        if(subs.length && subs.length<ACTIVE_SUBS.length) starts=subs.map(n=>'/'+n); }
+      jobs.push({src:SRC.clients, deep, starts});
+    } else {
+      const subs=selectedSubs(); const chosen=subs.length?subs:ACTIVE_SUBS;
+      jobs.push({src:SRC.clients, deep:true, starts:chosen.map(n=>'/'+n)});
+    }
   }
   if($('cbShop').checked) jobs.push({src:SRC.shop, deep:$('deepShop').checked, starts:['']});
   return jobs;
@@ -442,18 +464,15 @@ function showLink(box,href){
 }
 
 /* ---------- ИЗМЕНИТЬ ССЫЛКИ ---------- */
-function closeEdit(){ $('editPanel').hidden=true; $('editPass').hidden=false; $('editFields').hidden=true; $('editPassInput').value=''; $('editMsg').textContent=''; }
-$('btnEdit').addEventListener('click',()=>{ const p=$('editPanel'); if(p.hidden){ closeEdit(); p.hidden=false; $('editPassInput').focus(); } else closeEdit(); });
+function closeEdit(){ $('editPanel').hidden=true; }
+$('btnEdit').addEventListener('click',()=>{
+  const p=$('editPanel');
+  if(p.hidden){ p.hidden=false; $('editPass').hidden=true; $('editFields').hidden=false;
+    $('urlClients').value=SRC.clients.url; $('urlShop').value=SRC.shop.url; }
+  else closeEdit();
+});
 $('editCancel1').addEventListener('click',closeEdit);
 $('editCancel2').addEventListener('click',closeEdit);
-function editUnlock(){
-  if($('editPassInput').value.trim()===PASS_EDIT){
-    $('editPass').hidden=true; $('editFields').hidden=false;
-    $('urlClients').value=SRC.clients.url; $('urlShop').value=SRC.shop.url;
-  } else { shake($('editPanel')); $('editMsg').textContent='Неверный пароль'; $('editPassInput').value=''; }
-}
-$('editPassBtn').addEventListener('click',editUnlock);
-$('editPassInput').addEventListener('keydown',e=>{ if(e.key==='Enter') editUnlock(); });
 $('editSave').addEventListener('click',()=>{
   SRC.clients.url=$('urlClients').value.trim()||DEFAULTS.clients.url;
   SRC.shop.url=$('urlShop').value.trim()||DEFAULTS.shop.url;
@@ -466,7 +485,7 @@ $('btnAll').addEventListener('click',()=>run(false));
 $('btnStop').addEventListener('click',()=>{ if(controller) controller.abort(); });
 $('query').addEventListener('keydown',e=>{ if(e.key==='Enter') run(true); });
 
-buildSubs(); syncClients(); syncShop();
+buildSubs(ACTIVE_SUBS); syncClients(); syncShop();
 </script>
 </body>
 </html>
